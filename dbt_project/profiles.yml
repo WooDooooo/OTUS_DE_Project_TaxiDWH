@@ -1,0 +1,11 @@
+nyctaxi:
+  target: dev
+  outputs:
+    dev:
+      type: clickhouse
+      host: clickhouse
+      port: 8123
+      user: admin
+      password: admin12345
+      schema: nyc_taxi
+      secure: false

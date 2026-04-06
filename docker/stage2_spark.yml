@@ -1,0 +1,51 @@
+name: nyc_stage2_spark
+
+# Этап 2 - Spark
+# Слой обработки данных Spark с выделенной парой master/worker.
+# Master и worker должны находиться в одном compose-файле,
+# потому что worker при старте подключается к master через SPARK_MASTER_URL.
+# Образ: apache/spark:3.5.0 (официальный образ Apache)
+# JAR-файлы для S3A-коннектора примонтированы из spark/jars/
+
+services:
+  spark-master:
+    image: apache/spark:3.5.0
+    container_name: nyc_spark_master
+    restart: "no"
+    ports:
+      - "7077:7077"   # порт для подключения workers и заданий
+      - "8080:8080"   # веб-интерфейс Spark
+    environment:
+      SPARK_NO_DAEMONIZE: "true"
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    volumes:
+      - ../spark/jobs:/opt/spark/jobs
+      - ../spark/jars:/opt/spark/extra_jars
+      - ../spark/conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
+    networks:
+      - nyc-data-net
+      
+  spark-worker:
+    image: apache/spark:3.5.0
+    container_name: nyc_spark_worker
+    restart: "no"
+    depends_on:
+      - spark-master
+    ports:
+      - "8081:8081"   # веб-интерфейс worker
+    environment:
+      SPARK_NO_DAEMONIZE: "true"
+      SPARK_WORKER_MEMORY: 2g
+      SPARK_WORKER_CORES: "2"
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    volumes:
+      - ../spark/jobs:/opt/spark/jobs
+      - ../spark/jars:/opt/spark/extra_jars
+      - ../spark/conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
+    networks:
+      - nyc-data-net
+
+networks:
+  nyc-data-net:
+    name: nyc_data_net
+    external: true

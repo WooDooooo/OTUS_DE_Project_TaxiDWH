@@ -1,0 +1,16 @@
+FROM apache/airflow:2.10.3-python3.11
+
+# Минимальный набор для dbt + базы metadata на Postgres + OpenLineage.
+# Docker CLI нужен, потому что текущий DAG запускает Spark через
+# `docker exec nyc_spark_master spark-submit ...`.
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    docker.io \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+USER airflow
+RUN pip install --no-cache-dir \
+    dbt-clickhouse==1.8.0 \
+    apache-airflow-providers-postgres \
+    apache-airflow-providers-openlineage

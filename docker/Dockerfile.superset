@@ -1,0 +1,7 @@
+FROM apache/superset:4.1.1
+
+# Драйвер ClickHouse нужен Superset для подключения к DWH через SQLAlchemy URI
+# вида clickhousedb://user:password@clickhouse:8123/nyc_taxi.
+USER root
+RUN pip install --no-cache-dir clickhouse-connect
+USER superset

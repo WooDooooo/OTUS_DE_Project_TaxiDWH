@@ -1,0 +1,86 @@
+name: nyc_stage5_superset
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: nyc_superset_redis
+    restart: "no"
+    networks:
+      - nyc-data-net
+
+  superset-init:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.superset
+    container_name: nyc_superset_init
+    restart: "no"
+    depends_on:
+      - redis
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-dev-superset-secret-key}
+      SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+      SUPERSET_ADMIN_USERNAME: ${SUPERSET_ADMIN_USERNAME:-admin}
+      SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD:-admin}
+      SUPERSET_ADMIN_FIRSTNAME: ${SUPERSET_ADMIN_FIRSTNAME:-Admin}
+      SUPERSET_ADMIN_LASTNAME: ${SUPERSET_ADMIN_LASTNAME:-User}
+      SUPERSET_ADMIN_EMAIL: ${SUPERSET_ADMIN_EMAIL:-admin@example.com}
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST:-clickhouse}
+      CLICKHOUSE_PORT: ${CLICKHOUSE_PORT:-8123}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-nyc_taxi}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+    command:
+      - /bin/sh
+      - -c
+      - |
+        superset db upgrade &&
+        superset fab create-admin \
+          --username "$${SUPERSET_ADMIN_USERNAME}" \
+          --firstname "$${SUPERSET_ADMIN_FIRSTNAME}" \
+          --lastname "$${SUPERSET_ADMIN_LASTNAME}" \
+          --email "$${SUPERSET_ADMIN_EMAIL}" \
+          --password "$${SUPERSET_ADMIN_PASSWORD}" || true &&
+        superset init
+    volumes:
+      - superset_home:/app/superset_home
+      - ../superset:/app/pythonpath
+    networks:
+      - nyc-data-net
+
+  superset:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.superset
+    container_name: nyc_superset
+    restart: "no"
+    depends_on:
+      superset-init:
+        condition: service_completed_successfully
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-dev-superset-secret-key}
+      SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST:-clickhouse}
+      CLICKHOUSE_PORT: ${CLICKHOUSE_PORT:-8123}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-nyc_taxi}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+    command:
+      - /bin/sh
+      - -c
+      - |
+        /usr/bin/run-server.sh
+    ports:
+      - "8088:8088"
+    volumes:
+      - superset_home:/app/superset_home
+      - ../superset:/app/pythonpath
+    networks:
+      - nyc-data-net
+
+networks:
+  nyc-data-net:
+    external: true
+    name: nyc_data_net
+
+volumes:
+  superset_home:
