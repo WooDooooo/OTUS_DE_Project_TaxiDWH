@@ -36,6 +36,9 @@ chmod 777 \
   airflow/logs/dag_processor_manager \
   dbt_project || true
 
+echo "Проверка локальных JAR-файлов Spark..."
+"$ROOT_DIR/scripts/download_spark_jars.sh"
+
 echo "Запуск этапа 1: MinIO"
 docker compose --env-file "$ENV_FILE" -f docker/stage1_s3_minio.yml up -d $BUILD_FLAG
 

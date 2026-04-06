@@ -82,6 +82,9 @@ Source URLs -> MinIO (bronze) -> Spark (MinIO silver/quarantine) -> ClickHouse (
 ./start_project.sh
 ./stop_project.sh
 
+При запуске `./start_project.sh` проект автоматически проверяет наличие
+локальных JAR-файлов Spark в `spark/jars/` и при необходимости скачивает их.
+
 Проект запускается поэтапно:
 
 1. `Stage 1` - объектное хранилище MinIO
@@ -118,3 +121,5 @@ Source URLs -> MinIO (bronze) -> Spark (MinIO silver/quarantine) -> ClickHouse (
 Локальные зависимости Spark
 - JAR-файлы в `spark/jars/` не включены в репозиторий.
 - Это локальные runtime-зависимости для S3A и JDBC.
+- Скрипт `scripts/download_spark_jars.sh` автоматически подгружает их
+  перед запуском Spark в `./start_project.sh`.
